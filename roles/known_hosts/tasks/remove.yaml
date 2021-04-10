@@ -1,0 +1,13 @@
+- name: Use dig to expand the hosts to include IP addresses
+  set_fact:
+    expanded_hosts: "{{ [inventory_hostname, lookup('community.general.dig', inventory_hostname)] | unique  }}"
+
+- name: Remove host(s) from known_hosts
+  known_hosts:
+    name:  "{{ item }}"
+    state: absent
+  # The known_hosts module's check-delete loop fails when there's parallelism. Limit it to a single thread
+  throttle: 1
+  delegate_to: localhost
+  when: item not in ignore_hosts
+  loop: "{{ expanded_hosts }}"

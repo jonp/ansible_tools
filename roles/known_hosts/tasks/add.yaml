@@ -1,0 +1,19 @@
+---
+- name: "Getting ssh key hashes for the host(s)"
+  command:  "ssh-keyscan {{ item }} -H"
+  changed_when: false
+  register: out
+  failed_when: out.stdout_lines | length == 0
+  delegate_to: localhost
+  loop: "{{ hosts | mandatory }}"
+
+- name: "Adding to ~/.ssh/known_hosts"
+  known_hosts:
+    state: present
+    key: "{{ item }}"
+    name: "{{ item.split(' ')|first }}"
+  delegate_to: localhost
+  loop: '{{ out | json_query("results[].stdout_lines") | d([]) | flatten }}'
+  # This task's check-delete-add loop fails when there's parallelism. Limit it to a single thread
+  throttle: 1
+
