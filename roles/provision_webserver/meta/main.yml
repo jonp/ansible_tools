@@ -1,0 +1,8 @@
+galaxy_info:
+  author: Jon
+  description: For spinning up VMs in EC2 with one call
+  license: CC-BY-4.0
+  platforms:
+    - name: All
+
+  min_ansible_version: 2.1

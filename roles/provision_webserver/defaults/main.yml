@@ -1,0 +1,15 @@
+---
+# defaults file for provision_webserver
+override_domain: false
+
+region: us-east-2
+disk_gb: 100  # 100 GB is enough to run training. 8 GB is enough just to test scripts
+instance_type_id:  t2.micro
+ami: "ami-08962a4068733a2b6" # Ubuntu 20.04
+
+# The firewall security group
+security_group: web_and_ssh
+
+# route53 DNS info
+subdomain: cd
+dns_ttl: 60 # crazy low for iterating in development

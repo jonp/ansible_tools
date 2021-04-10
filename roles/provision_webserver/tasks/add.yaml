@@ -1,0 +1,110 @@
+---
+- name: Startup message
+  debug:
+    msg: |
+      Starting a machine with the following parameters:
+        instance_type:    {{ instance_type_id | mandatory }}
+        region:           {{ region           | mandatory }}
+        disk size [GB]:   {{ disk_gb }}
+        image:            {{ ami              | mandatory }}
+        ssh_key_name:     {{ ssh_key_name     | mandatory }}
+        subdomain:        {{ subdomain        | default('no value') }}
+        domain:           {{ domain           | default('no value') }}
+        overwrite_domain: {{ overwrite_domain | default(false) }}
+        rel_environment:  {{ rel_environment  | mandatory }}
+        dns_ttl:          {{ dns_ttl          | mandatory }}
+
+- name: Check whether the subdomain is in use
+  when: subdomain is defined and not (overwrite_domain|default(false))
+  block:
+    - name: Get the subdomain from Route53
+      route53:
+        state: get
+        zone: "{{ domain }}"
+        record: "{{ subdomain }}.{{ domain }}"
+        type: "A"
+      register: out
+    - name: Stop if the subdomain is in use
+      fail:
+        msg: '{{ subdomain }}.{{ domain }} is in use. Either deallocate or pass "overwrite_domain: yes"'
+      when: out | json_query('set.value')
+
+# The ec2_key module doesn't have a "get" method, so we create a key with the same name.
+# If creation was successful, then the key wasn't there in the first place
+- name: Check that the ssh key is in EC2
+  ec2_key:
+    region: us-east-2
+    name: "{{ key_name }}"
+    state: present
+  register: keyout
+- name: Handle missing key
+  when: keyout.changed
+  block:
+  - name: Delete newly created spurious key
+    ec2_key:
+      region: us-east-2
+      name: "{{ key_name }}"
+      state: absent
+  - name: complain
+    fail:
+      msg: "There is no key named {{ key_name }}"
+
+- name: make ssh security group
+  ec2_group:
+    name: "{{ security_group }}"
+    region: "{{ region }}"
+    description: SSH Security Group
+    rules:
+      - proto: tcp
+        ports:
+        - 22
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow all on port 22
+      - proto: tcp
+        ports:
+        - 80
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow all http traffic
+      - proto: tcp
+        ports:
+        - 443
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow all https traffic
+
+- name: start the VM
+  amazon.aws.ec2:
+    group: "{{ security_group }}"
+    instance_tags:
+      environment: "{{ rel_environment }}"
+    instance_type: "{{ instance_type.id }}"
+    image: "{{ ami }}"
+    key_name: "{{ ssh_key_name }}"
+    region: "{{ region }}"
+    volumes:
+      - device_name: /dev/sda1
+        volume_type: gp2
+        volume_size: "{{ disk_gb }}"
+    wait: yes
+  register: start_result
+
+- name: "Save the new instance's info in provision_webserver_new_instance"
+  set_fact:
+    provision_webserver_new_instance: "{{ start_result.instances.0 }}"
+
+- name: "Waiting for host(s) to be available"
+  wait_for:
+    state: started
+    host: "{{ provision_webserver_new_instance.public_dns_name }}"
+    port: 22
+    delay: 3
+  delegate_to: localhost
+
+- name: Add the subdomain
+  route53:
+    state: present
+    zone: "{{ domain }}"
+    record: "{{ subdomain }}.{{ domain }}"
+    overwrite: "{{ overwrite_domain|default(false) }}"
+    type: "A"
+    value: "{{ start_result.instances.0.public_ip }}"
+    ttl: "{{ dns_ttl }}"

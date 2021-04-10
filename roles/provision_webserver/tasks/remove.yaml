@@ -1,0 +1,47 @@
+---
+- name: Ensure required variables are set
+  assert:
+    that:
+      - domain is defined
+      - aws_ec2_instance_id is defined
+      - aws_public_ip is defined
+
+- name: Get the list of Route53 zones
+  route53_info:
+    query: hosted_zone
+  register: hosted_zones
+  delegate_to: localhost
+
+- name: Get all records from the zone
+  route53_info:
+    query: record_sets
+    hosted_zone_id: "{{ zone_id }}"
+  vars:
+    query: "HostedZones[?Name == '{{ domain }}.'] | [0].Id"
+    zone_id: "{{ (hosted_zones | json_query(query)).split('/') | last }}"
+  register: records_output
+  delegate_to: localhost
+
+- name: Remove the records that point to the host
+  route53:
+    state: absent
+    zone: "{{ domain }}"
+    record: "{{ item.Name }}"
+    ttl: "{{ item.TTL }}"
+    type: "{{ item.Type }}"
+    value: "{{ aws_public_ip }}"
+  vars:
+    matching_records_query: "ResourceRecordSets[? Type=='A' && ResourceRecords[? Value == '{{ aws_public_ip }}' ] ]"
+    matching_records: "{{ records_output | json_query(matching_records_query) }}"
+  loop: "{{ matching_records }}"
+  delegate_to: localhost
+
+- name: stop
+  community.aws.ec2_instance:
+    state: terminated
+    instance_ids:
+      - "{{ aws_ec2_instance_id }}"
+    region: "{{ aws_ec2_region }}"
+    wait: no
+  delegate_to: localhost
+
