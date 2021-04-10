@@ -1,5 +1,5 @@
 galaxy_info:
-  author: Jon
+  author: jonp
   description: |
     A shim for the known_hosts module. Handles:
     - Looping on multiple hosts

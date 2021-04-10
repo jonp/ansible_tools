@@ -1,5 +1,5 @@
 galaxy_info:
-  author: Jon
+  author: jonp
   description: For spinning up VMs in EC2 with one call
   license: CC-BY-4.0
   platforms:
