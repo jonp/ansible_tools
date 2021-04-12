@@ -27,7 +27,7 @@
     - name: Stop if the subdomain is in use
       fail:
         msg: '{{ subdomain }}.{{ domain }} is in use. Either deallocate or pass "overwrite_domain: yes"'
-      when: out | json_query('set.value')
+      when: (out | json_query('set.value')) or (out | json_query('set.ResourceRecords[].Value'))
 
 # The ec2_key module doesn't have a "get" method, so we create a key with the same name.
 # If creation was successful, then the key wasn't there in the first place
