@@ -84,6 +84,7 @@
       - device_name: /dev/sda1
         volume_type: gp2
         volume_size: "{{ disk_gb }}"
+        delete_on_termination: yes
     wait: yes
   register: start_result
 
