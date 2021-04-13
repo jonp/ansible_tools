@@ -11,7 +11,7 @@
         subdomain:        {{ subdomain        | default('no value') }}
         domain:           {{ domain           | default('no value') }}
         overwrite_domain: {{ overwrite_domain | default(false) }}
-        rel_environment:  {{ rel_environment  | mandatory }}
+        instance_tags:    {{ instance_tags    | mandatory }}
         dns_ttl:          {{ dns_ttl          | mandatory }}
 
 - name: Check whether the subdomain is in use
@@ -74,8 +74,7 @@
 - name: start the VM
   amazon.aws.ec2:
     group: "{{ security_group }}"
-    instance_tags:
-      environment: "{{ rel_environment }}"
+    instance_tags: "{{ instance_tags }}"
     instance_type: "{{ instance_type.id }}"
     image: "{{ ami }}"
     key_name: "{{ ssh_key_name }}"
