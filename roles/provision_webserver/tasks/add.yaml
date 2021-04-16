@@ -75,7 +75,7 @@
   amazon.aws.ec2:
     group: "{{ security_group }}"
     instance_tags: "{{ instance_tags }}"
-    instance_type: "{{ instance_type.id }}"
+    instance_type: "{{ instance_type_id }}"
     image: "{{ ami }}"
     key_name: "{{ ssh_key_name }}"
     region: "{{ region }}"
