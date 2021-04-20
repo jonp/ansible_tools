@@ -34,6 +34,7 @@
     matching_records: "{{ records_output | json_query(matching_records_query) }}"
   loop: "{{ matching_records }}"
   delegate_to: localhost
+  when: aws_public_ip|d('')
 
 - name: stop
   community.aws.ec2_instance:
