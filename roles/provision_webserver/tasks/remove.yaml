@@ -4,7 +4,6 @@
     that:
       - domain is defined
       - aws_ec2_instance_id is defined
-      - aws_public_ip is defined
 
 - name: Get the list of Route53 zones
   route53_info:
